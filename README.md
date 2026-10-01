@@ -1,5 +1,5 @@
 # tsh
 
-tsh is an implementation of OSTEP's wish project.
+Tendo's implementation of the `wish` project of [OSTEP](https://pages.cs.wisc.edu/~remzi/OSTEP/).
 
-The name stands for Tendo Shell.
+The name stands for Tendo SHell.
