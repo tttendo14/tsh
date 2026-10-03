@@ -19,13 +19,17 @@ int main(int argc, char *argv[]) {
   // std::cerr << "batchMode = " << batchMode << std::endl;
 
   std::ifstream ifstream;
-  if (argc != 1) {
+  if (argc == 2) {
     ifstream = std::ifstream(argv[1]);
     if (!ifstream.is_open()) {
       std::cerr << "Failed to open batch file " << argv[1] << std::endl;
       exit(1);
     }
+  } else if (argc > 2) {
+    std::cerr << "Invalid argument" << std::endl;
+    exit(1);
   }
+
   std::istream *p_in = batchMode ? (&ifstream) : (&std::cin);
 
   while (true) {
