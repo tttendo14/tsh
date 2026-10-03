@@ -3,7 +3,9 @@
 #include "parser.hpp"
 #include "shell_path.hpp"
 
+#include <fstream>
 #include <iostream>
+#include <ostream>
 #include <string>
 #include <unistd.h>
 #include <utility>
@@ -11,18 +13,27 @@
 
 void print_prompt() { std::cout << "tsh> "; }
 
-int main() {
+int main(int argc, char *argv[]) {
 
-  const char *home = std::getenv("HOME");
-  if (home != nullptr) {
-    chdir(home);
+  bool batchMode = (argc != 1);
+  // std::cerr << "batchMode = " << batchMode << std::endl;
+
+  std::ifstream ifstream;
+  if (argc != 1) {
+    ifstream = std::ifstream(argv[1]);
+    if (!ifstream.is_open()) {
+      std::cerr << "Failed to open batch file " << argv[1] << std::endl;
+      exit(1);
+    }
   }
+  std::istream *p_in = batchMode ? (&ifstream) : (&std::cin);
 
   while (true) {
-    print_prompt();
+    if (!batchMode)
+      print_prompt();
 
     std::string line;
-    if (!std::getline(std::cin, line)) {
+    if (!std::getline(*p_in, line)) {
       break;
     }
 
@@ -38,7 +49,15 @@ int main() {
       }
       return 0;
     } else if (args[0] == "cd") {
-      if (args.size() != 2) {
+      if (args.size() == 1) {
+        const char *home = std::getenv("HOME");
+        if (home != nullptr) {
+          chdir(home);
+        } else {
+          std::cerr << "cd: Failed to get $HOME directory" << std::endl;
+        }
+        continue;
+      } else if (args.size() != 2) {
         std::cerr << "cd: Invalid argument" << std::endl;
         continue;
       }
