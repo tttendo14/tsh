@@ -52,10 +52,10 @@ int main(int argc, char *argv[]) {
 
     // TODO(M3-M5): redirection, '&' and '|'. Until then, only a single
     // plain command is run.
+    // Line[0]: Pipeline, Pipeline[0]: Command
     const Command &cmd = (*parsed)[0][0];
-    if (parsed->size() > 1 || (*parsed)[0].size() > 1 || cmd.in || cmd.out) {
-      std::cerr << "tsh: '&', '|', '<' and '>' are not implemented yet"
-                << std::endl;
+    if (parsed->size() > 1 || (*parsed)[0].size() > 1) {
+      std::cerr << "tsh: '&' are '|' are not implemented yet" << std::endl;
       continue;
     }
     const std::vector<std::string> &args = cmd.argv;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    run_command(args);
+    run_command(cmd);
   }
 
   return 0;

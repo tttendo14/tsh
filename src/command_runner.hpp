@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include "parser.hpp"
 
-void run_command(const std::vector<std::string>& args);
+void run_command(const Command &command);

@@ -2,12 +2,16 @@
 #include "shell_path.hpp"
 
 #include <cstdlib>
+#include <fcntl.h>
 #include <iostream>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
 
-void run_command(const std::vector<std::string> &args) {
+void run_command(const Command &command) {
+
+  const std::vector<std::string> &args = command.argv;
+
   if (args.empty()) {
     return;
   }
@@ -28,6 +32,24 @@ void run_command(const std::vector<std::string> &args) {
   }
 
   if (pid == 0) { // child process
+    if (command.in) {
+      int fd_in = open(command.in.value().c_str(), O_RDONLY);
+      if (dup2(fd_in, STDIN_FILENO) == -1) {
+        perror(command.in.value().c_str());
+        _exit(1);
+      }
+      close(fd_in);
+    }
+    if (command.out) {
+      int fd_out =
+          open(command.out.value().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      // 0644 == (644)_8 == rw-r--r--
+      if (dup2(fd_out, STDOUT_FILENO) == -1) {
+        perror(command.out.value().c_str());
+        _exit(1);
+      }
+      close(fd_out);
+    }
     bool containsSlash = false;
     for (size_t i = 0; i < args[0].size(); i++)
       if (args[0][i] == '/')
