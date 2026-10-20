@@ -41,10 +41,24 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    std::expected<Line, std::string> args = parse_args(line);
-    if (args.empty()) {
+    std::expected<Line, std::string> parsed = parse_args(line);
+    if (!parsed) {
+      std::cerr << "tsh: " << parsed.error() << std::endl;
       continue;
     }
+    if (parsed->empty()) {
+      continue;
+    }
+
+    // TODO(M3-M5): redirection, '&' and '|'. Until then, only a single
+    // plain command is run.
+    const Command &cmd = (*parsed)[0][0];
+    if (parsed->size() > 1 || (*parsed)[0].size() > 1 || cmd.in || cmd.out) {
+      std::cerr << "tsh: '&', '|', '<' and '>' are not implemented yet"
+                << std::endl;
+      continue;
+    }
+    const std::vector<std::string> &args = cmd.argv;
 
     if (args[0] == "exit") {
       if (args.size() != 1) {
