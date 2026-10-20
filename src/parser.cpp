@@ -2,6 +2,7 @@
 
 #include <expected>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -27,52 +28,53 @@ struct Token {
   }
 };
 
+bool is_blank(char c) { return c == ' ' || c == '\t'; }
+
+// The token type of a single-character operator, or nullopt if c is not one.
+std::optional<TokenType> operator_type(char c) {
+  switch (c) {
+  case '&':
+    return TokenType::Amp;
+  case '|':
+    return TokenType::Pipe;
+  case '<':
+    return TokenType::Lt;
+  case '>':
+    return TokenType::Gt;
+  default:
+    return std::nullopt;
+  }
+}
+
 std::expected<std::vector<Token>, std::string>
 tokenizer(std::string_view line) {
   std::vector<Token> args;
   std::size_t pos = 0;
   while (pos < line.size()) {
-    while (pos < line.size() && (line[pos] == ' ' || line[pos] == '\t')) {
+    while (pos < line.size() && is_blank(line[pos])) {
       ++pos;
     }
     if (pos == line.size()) {
       break;
     }
 
-    // static const std::string special_symbols = "&|<>";
-    // static const TokenType special_symbols_token[4] = {
-    //     TokenType::Lt, TokenType::Gt, TokenType::Pipe, TokenType::Amp};
-
-    if (line[pos] == '&') {
-      args.emplace_back(TokenType::Amp, "");
-      pos++;
-      continue;
-    } else if (line[pos] == '|') {
-      args.emplace_back(TokenType::Pipe, "");
-      pos++;
-      continue;
-    } else if (line[pos] == '<') {
-      args.emplace_back(TokenType::Lt, "");
-      pos++;
-      continue;
-    } else if (line[pos] == '>') {
-      args.emplace_back(TokenType::Gt, "");
-      pos++;
+    if (const auto op = operator_type(line[pos])) {
+      args.emplace_back(*op, "");
+      ++pos;
       continue;
     }
+
     std::string arg;
-    while (pos < line.size() && line[pos] != ' ' && line[pos] != '\t' &&
-           line[pos] != '&' && line[pos] != '|' && line[pos] != '<' &&
-           line[pos] != '>') {
-      if (line[pos] == '\\' && pos + 1 < line.size() &&
-          (line[pos + 1] == ' ' || line[pos + 1] == '\t' ||
-           line[pos + 1] == '&' || line[pos + 1] == '<' ||
-           line[pos + 1] == '>' || line[pos + 1] == '|')) {
+    while (pos < line.size() && !is_blank(line[pos]) &&
+           !operator_type(line[pos])) {
+      // A backslash makes the next character literal, whatever it is.
+      if (line[pos] == '\\') {
+        if (pos + 1 == line.size()) {
+          return std::unexpected<std::string>(
+              "tokenizer: a valid line cannot end with a '\\'");
+        }
         arg += line[pos + 1];
         pos += 2;
-      } else if (line[pos] == '\\' && pos + 1 == line.size()) {
-        return std::unexpected<std::string>(
-            "tokenizer: a valid line cannot end with a '\\'");
       } else {
         arg += line[pos++];
       }
