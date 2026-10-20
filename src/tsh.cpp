@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    std::vector<std::string> args = parse_args(line);
+    std::expected<Line, std::string> args = parse_args(line);
     if (args.empty()) {
       continue;
     }

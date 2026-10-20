@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace {
 enum class TokenType { Word, Lt, Gt, Pipe, Amp };
@@ -83,9 +84,26 @@ tokenizer(std::string_view line) {
   }
   return args;
 }
+
+class Parser {
+public:
+  explicit Parser(std::vector<Token> &&tokens_) : tokens(std::move(tokens_)) {}
+
+private:
+  std::vector<Token> tokens;
+};
+
 } // namespace
 
-// Line parse_args(std::string_view line) {}
+// std::string to_string(const Line &line) {}
+
+std::expected<Line, std::string> parse_args(std::string_view line) {
+  auto tokens = tokenizer(line);
+  if (!tokens.has_value())
+    return std::unexpected(tokens.error());
+  Parser parser(std::move(*tokens));
+  return std::unexpected<std::string>("placeholder");
+}
 
 // int main() {
 //   std::string str;
