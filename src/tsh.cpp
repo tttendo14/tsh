@@ -1,14 +1,15 @@
 #include "tsh.hpp"
 #include "command_runner.hpp"
 #include "parser.hpp"
-#include "shell_path.hpp"
 
+#include <algorithm>
+#include <cerrno>
 #include <fstream>
 #include <iostream>
 #include <ostream>
 #include <string>
 #include <unistd.h>
-#include <utility>
+// #include <utility>
 #include <vector>
 
 void print_prompt() { std::cout << "tsh> "; }
@@ -50,49 +51,33 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    // TODO(M3-M5): redirection, '&' and '|'. Until then, only a single
-    // plain command is run.
+    // TODO(M5): '|'. Until then, only a single pipeline is run.
     // Line[0]: Pipeline, Pipeline[0]: Command
-    const Command &cmd = (*parsed)[0][0];
-    if (parsed->size() > 1 || (*parsed)[0].size() > 1) {
-      std::cerr << "tsh: '&' are '|' are not implemented yet" << std::endl;
-      continue;
-    }
-    const std::vector<std::string> &args = cmd.argv;
+    //
 
-    if (args[0] == "exit") {
-      if (args.size() != 1) {
-        std::cerr << "exit: Invalid argument" << std::endl;
-        continue;
-      }
-      return 0;
-    } else if (args[0] == "cd") {
-      if (args.size() == 1) {
-        const char *home = std::getenv("HOME");
-        if (home != nullptr) {
-          chdir(home);
-        } else {
-          std::cerr << "cd: Failed to get $HOME directory" << std::endl;
-        }
-        continue;
-      } else if (args.size() != 2) {
-        std::cerr << "cd: Invalid argument" << std::endl;
-        continue;
-      }
-      if (chdir(args[1].c_str()) == -1) {
-        std::cerr << "cd: chdir() error, perhaps an invalid directory was given"
-                  << std::endl;
-        continue;
-      }
+    bool has_pipe = std::ranges::any_of(
+        *parsed, [](const Pipeline &p) -> bool { return p.size() > 1; });
 
-      continue;
-    } else if (args[0] == "path") {
-      std::vector<std::string> dirs{args.begin() + 1, args.end()};
-      ShellPath::instance().setDirs(std::move(dirs));
+    if (has_pipe) {
+      std::cerr << "tsh: '|' are not implemented yet" << std::endl;
       continue;
     }
 
-    run_command(cmd);
+    bool exit = false;
+    for (const auto &pipeline : *parsed) {
+      const Command &cmd = pipeline[0];
+
+      CommandExit_t command_rv = run_command(cmd);
+      if (command_rv == CommandExit_t::Exit)
+        exit = true;
+    }
+    // parent process
+    while (waitpid(-1, nullptr, 0) > 0) {
+    }
+
+    if (exit) {
+      break;
+    }
   }
 
   return 0;

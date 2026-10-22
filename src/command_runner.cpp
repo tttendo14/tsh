@@ -8,13 +8,8 @@
 #include <unistd.h>
 #include <vector>
 
-void run_command(const Command &command) {
-
+pid_t spawn_child(const Command &command) {
   const std::vector<std::string> &args = command.argv;
-
-  if (args.empty()) {
-    return;
-  }
 
   std::vector<char *> c_args;
   c_args.reserve(args.size() + 1);
@@ -64,10 +59,65 @@ void run_command(const Command &command) {
 
     std::cerr << "execv() failed\n";
     _exit(1);
+  } else {
+    return pid;
+  }
+}
+
+Builtin_t run_builtin(const Command &command) {
+  const std::vector<std::string> &args = command.argv;
+  if (args[0] == "exit") {
+    if (args.size() != 1) {
+      std::cerr << "exit: Invalid argument" << std::endl;
+      return Builtin_t::Handled;
+    }
+    return Builtin_t::Exit;
+  } else if (args[0] == "cd") {
+    if (args.size() == 1) {
+      const char *home = std::getenv("HOME");
+      if (home != nullptr) {
+        chdir(home);
+      } else {
+        std::cerr << "cd: Failed to get $HOME directory" << std::endl;
+      }
+      return Builtin_t::Handled;
+    } else if (args.size() != 2) {
+      std::cerr << "cd: Invalid argument" << std::endl;
+      return Builtin_t::Handled;
+    }
+    if (chdir(args[1].c_str()) == -1) {
+      std::cerr << "cd: chdir() error, perhaps an invalid directory was given"
+                << std::endl;
+      return Builtin_t::Handled;
+    }
+    return Builtin_t::Handled;
+  } else if (args[0] == "path") {
+    std::vector<std::string> dirs{args.begin() + 1, args.end()};
+    ShellPath::instance().setDirs(std::move(dirs));
+    return Builtin_t::Handled;
+  }
+  return Builtin_t::NotABuiltIn;
+}
+
+CommandExit_t run_command(const Command &command) {
+  if (command.argv.empty()) {
+    return CommandExit_t::Continue;
   }
 
-  // parent process
-  if (waitpid(pid, nullptr, 0) == -1) {
-    std::cerr << "waitpid() failed\n";
+  // const std::vector<std::string> &args = command.argv;
+  Builtin_t builtin_rv = run_builtin(command);
+
+  switch (builtin_rv) {
+  case Builtin_t::NotABuiltIn:
+    break;
+  case Builtin_t::Handled:
+    return CommandExit_t::Continue;
+  case Builtin_t::Exit:
+    return CommandExit_t::Exit;
   }
+
+  // pid_t pid = spawn_child(command);
+  spawn_child(command);
+
+  return CommandExit_t::Continue;
 }
